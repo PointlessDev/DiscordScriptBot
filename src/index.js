@@ -8,12 +8,13 @@ const discord = require('discord.js');
 const sqlite = require('sqlite');
 const moment = require('moment');
 const fs = require('fs');
+const path = require('path');
 const {VM} = require('vm2');
 const Script = require('./script');
 const Proxy = require('./proxy');
 
 class DuplicateScriptError extends Error {}
-const TEST_SCRIPT_CODE = fs.readFileSync('./test-script.js');
+const TEST_SCRIPT_CODE = fs.readFileSync(path.resolve(__filename, './test-script.js'));
 const dbPromise = sqlite.open('./programs.sqlite', {Promise});
 let db;
 let client;
