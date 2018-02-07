@@ -9,7 +9,7 @@ const sqlite = require('sqlite');
 const moment = require('moment');
 const fs = require('fs');
 const {VM} = require('vm2');
-const Script = require('./Script');
+const Script = require('./script');
 const Proxy = require('./proxy');
 
 class DuplicateScriptError extends Error {}
