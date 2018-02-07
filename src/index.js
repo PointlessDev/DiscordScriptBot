@@ -13,8 +13,7 @@ const {VM} = require('vm2');
 const Script = require('./script');
 const Proxy = require('./proxy');
 
-class DuplicateScriptError extends Error {}
-const TEST_SCRIPT_CODE = fs.readFileSync(path.resolve(__filename, './test-script.js'));
+const TEST_SCRIPT_CODE = fs.readFileSync(path.resolve(__dirname, 'test-script.js'));
 const dbPromise = sqlite.open('./programs.sqlite', {Promise});
 let db;
 let client;
@@ -56,8 +55,8 @@ function stopScript(name) {
 
 // Bot
 function loadConfig() {
-  return new Promise(async (resolve) => { // Async executor because easy error handling.
-    fs.readFile('./config.json', (err, data) => {
+  return new Promise((resolve) => { // Async executor because easy error handling.
+    fs.readFile(path.resolve(__dirname, 'config.json'), (err, data) => {
       if(err) {
         console.error('[FATAL]: Can\'t load configuration!');
         throw err;
@@ -316,6 +315,7 @@ async function handleMessage(message) { // `@mention <command> [args...]`
       break;
   }
 }
+
 dbPromise
   .then(d => db = d)
   .then(checkDb)
