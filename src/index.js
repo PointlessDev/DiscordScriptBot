@@ -180,7 +180,10 @@ async function handleMessage(message) { // `@mention <command> [args...]`
       const script = await getScript(name);
       if(!script) return message.channel.send(`❌ A script with the name \`${name}\` couldn't be found`);
 
-      script.run(message);
+      script.run(message).then(
+        () => message.channel.send(`✅ Running script \\\`${name}\\\`!`),
+        err => message.channel.send(`❌ Script Failed!\n\`\`\`${err.stack}\`\`\``)
+      );
       break;
 
     case 'stop':
