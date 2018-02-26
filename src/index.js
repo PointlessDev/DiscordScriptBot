@@ -200,6 +200,7 @@ async function handleMessage(message) { // `@mention <command> [args...]`
       break;
 
     case 'delete':
+    case 'rm':
     case 'remove':
       (async function() {
         if(!name) return message.channel.send('❌ A bot needs a name');
@@ -208,13 +209,13 @@ async function handleMessage(message) { // `@mention <command> [args...]`
         await m.react('🛑');
         await m.react('❌');
 
-        let react = await m.awaitReactions(
+        let react = (await m.awaitReactions(
           (r, u) => u.id === config.owner && (r.emoji.name === '🗑' || r.emoji.name === '🛑' || r.emoji.name === '❌'),
           {
             time: 10 * 1000,
             max: 1
           }
-        ).first();
+        )).first();
         if(!react || react.emoji.name === '❌') message.channel.send('❌ Canceled!');
 
         if(react.emoji.name === '🗑') {
