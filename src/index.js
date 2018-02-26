@@ -219,11 +219,11 @@ async function handleMessage(message) { // `@mention <command> [args...]`
         if(!react || react.emoji.name === '❌') message.channel.send('❌ Canceled!');
 
         if(react.emoji.name === '🗑') {
-          await db.run('DELETE FROM script WHERE name = ?', name);
+          await db.run('DELETE FROM scripts WHERE name = ?', name);
           message.channel.send(`🗑 Deleted! (Can still be stopped using \`@Pointless Bot#3341 stop ${name}\``);
         } else if(react.emoji.name === '🛑') {
           stopScript(name);
-          await db.run('DELETE FROM script WHERE name = ?', name);
+          await db.run('DELETE FROM scripts WHERE name = ?', name);
           message.channel.send(`✅ Removed \\\`${name}\\\` and it's proxied handlers. Non-proxied handlers may still be running, consider \\\`@Pointless Bot#3341 shutdown\\\``)
         }
       })();
