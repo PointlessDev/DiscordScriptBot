@@ -3,9 +3,9 @@ import ConfigInterface from './config';
 import {inspect} from 'util';
 import {TextChannel} from 'discord.js';
 
-type ErrorLevel = 'Error' | 'Warn' | 'Log' | 'Debug';
+export type ErrorLevel = 'Error' | 'Warn' | 'Log' | 'Debug';
 
-enum ErrorColors {
+export enum ErrorColors {
   'Error' = 0xF44336,
   'Warn' = 0xFFC107,
   'Log' = 0x4CAF50,

@@ -7,7 +7,6 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "outDir": "dist",
-    "declaration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
