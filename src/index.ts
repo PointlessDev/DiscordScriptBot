@@ -19,7 +19,7 @@ let client: discord.Client;
 let config: ConfigInterface;
 let messageHandler: MessageHandler;
 
-interface Script {
+export interface Script {
   name: string;
   code: string;
   created: Date;
