@@ -2,6 +2,7 @@ import * as discord from 'discord.js';
 import ConfigInterface from './config';
 import {inspect} from 'util';
 import {TextChannel} from 'discord.js';
+import {hostname} from 'os';
 
 export type ErrorLevel = 'Error' | 'Warn' | 'Log' | 'Debug';
 
@@ -55,7 +56,10 @@ export class Logger {
       },
       color: ErrorColors[level],
       description: items[0],
-      fields
+      fields,
+      footer: {
+        text: `DiscordScriptBot by Pointless. Host: ${hostname()}. Env: ${process.env.ENV} V: ${require('../package.json').version}`
+      }
     }})
   }
 }
