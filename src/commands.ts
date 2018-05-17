@@ -11,6 +11,7 @@ import {hostname} from 'os';
 import Script from './script';
 
 const utcOffset = 12; // TODO Sort this out
+const ENV = process.env.ENV;
 
 function Command(triggers?: string[]) {
   return function(target: MessageHandler, propertyKey: string) {
@@ -38,19 +39,23 @@ interface ConfirmationOptions {
 
 export default class MessageHandler {
   public internalCommands: {[propKey: string]: string}; // CommandName: CommandHandlerKey
-  public runningScripts: Script[];
+  public runningScripts: Script[] = [];
   public get BOT_MENTION_PATTERN(): RegExp {
     return new RegExp(`^<@!?${this.client.user.id}>$`);
   }
   [propKey: string]: CommandFunction|any;
   private logger: Logger;
+  private db: Database;
   constructor(
     public client: discord.Client,
-    public config: ConfigInterface,
-    private db: Database
+    public config: ConfigInterface
   ) {
     client.on('message', m => this.handleMessage(m));
     this.logger = new Logger(client, config, 'Command Handler');
+    this.db = new Database(this);
+    this.db.connect()
+      .then(() => (ENV === 'dev' && console.log('[INFO]: Connected to DB!')))
+      .catch(async e => {this.logger.error('Failed to connect to DB!', e);console.error('Failed to connect to DB!');throw e;})
   }
 
   @Command() // DONE
@@ -58,7 +63,47 @@ export default class MessageHandler {
     await message.reply(args.contentFrom(0));
   }
 
-  @Command(['save', 'edit', 'create'])
+  @Command()
+  public async status(message: discord.Message, args: Arguments): Promise<void> {
+    message.channel.send({embed: {
+      title: `DiscordScriptBot v${require('../package.json').version || 'Unknown'}`,
+      description: 'DiscordScriptBot, a bot designed with extensibility and ease of modification in mind. May contain tree nuts.',
+      url: require('../package.json').homepage,
+      color: 0x4CAF50,
+      footer: {
+        text: 'Made by Pointless'
+      },
+      fields: [
+        {
+          name: 'Node.js',
+          value: process.version,
+          inline: true
+        },
+        {
+          name: 'Discord.js',
+          value: discord.version,
+          inline: true
+        },
+        {
+          name: 'Env',
+          value: `\`${ENV}\``,
+          inline: true
+        },
+        {
+          name: 'Host',
+          value: hostname(),
+          inline: true
+        },
+        {
+          name: 'Running Scripts',
+          value: this.runningScripts.length,
+          inline: true
+        }
+      ]
+    }})
+  }
+
+  @Command(['save', 'edit', 'create', 'add'])
   public async save(message: discord.Message, args: Arguments): Promise<void> {
     let name = args[0];
     let code = args.contentFrom(1);
@@ -71,9 +116,10 @@ export default class MessageHandler {
       return;
     }
 
-    // TODO Check if script exists, change confirmation message accordingly
+    const warn = (await this.db.isScript(name) ? 'Overwrite script' : 'Save script') + ` \`${name}\`? `;
+
     let choice = await this.confirmation(message.channel, {
-      confirmation: 'Save script?',
+      confirmation: warn + '```js\n' + code + '```',
       user: this.config.owner
     });
     if(choice !== '✅') {
@@ -81,7 +127,7 @@ export default class MessageHandler {
     }
 
     this.db.saveScript(name, code)
-      .then(() => succeed(message, `Script ${name} saved!`))
+      .then(() => succeed(message, `Script \`${name}\` saved!`))
       .catch(async e => {this.logger.error(e); await fail(message, 'Failed to save script. Error has been logged.'); });
   }
 
@@ -97,19 +143,22 @@ export default class MessageHandler {
       return;
     }
 
+    const running = this.isRunning(name);
     let choice = await this.confirmation(message.channel, {
       choices: ['🗑', '❌'],
-      confirmation: 'Are you sure',
+      confirmation: running ? `Script \`${name}\` is running, stop and delete?` : `Are you sure you want to delete \`${name}\`?`,
       user: this.config.owner
     });
-    if(choice !== '✅') {
+    if(choice !== '🗑') {
+      await fail(message, 'Cancelled!');
       return;
     }
-    this.doStopScript(name);
-    // TODO Check if script exists, and change output accordingly
+    if(running) {
+      this.doStopScript(name);
+    }
 
     this.db.deleteScript(name)
-      .then(() => message.reply(`🗑: Script ${name} deleted!`)) // Wastebasket emoji is invisible
+      .then(() => succeed(message, `Script ${name} deleted!`)) // Wastebasket emoji is invisible
       .catch(async e => {this.logger.error(e); await fail(message, 'Failed to delete script. Error has been logged.'); });
   }
 
@@ -132,7 +181,16 @@ export default class MessageHandler {
     }
 
     script.run(message)
-      .then(() =>  succeed(message, `Script ${name} has been run!`))
+      .then(async () =>  {
+        if(script.listening) {
+          let commands = script.commands.length;
+          let events = script.clientEvents.length;
+          this.runningScripts.push(script);
+          await succeed(message, `Script ${name} has been run! Registered ${commands} command${commands !== 1 ? 's' : ''} and ${events} client listener${events !== 1 ? 's' : ''}`);
+        } else {
+          await succeed(message, `Script ${name} has been run! No listeners registered!`);
+        }
+      })
       .catch(e => fail(message, `Script ${name} threw error: \`\`\`js\n${util.inspect(e).substr(0, 600)}\`\`\``));
   }
 
@@ -157,6 +215,7 @@ export default class MessageHandler {
       user: this.config.owner
     });
     if(choice !== '✅') {
+      await fail(message, 'Cancelled!');
       return;
     }
 
@@ -173,8 +232,7 @@ export default class MessageHandler {
   public async info(message: discord.Message, args: Arguments): Promise<void> {
     const name = args[0];
     if(!name) {
-      await fail(message, 'Can\'t get info about nothing?!');
-      return;
+      return this.status(message, args);
     }
 
     const script = await this.db.getScript(name);
@@ -209,6 +267,22 @@ export default class MessageHandler {
       }});
   }
 
+  @Command(['reload', 'restart']) // DONE
+  public async reload(message: discord.Message, args: Arguments): Promise<void> {
+    const react = await this.confirmation(message.channel, {
+      confirmation: 'Are you sure you want to soft restart this bot?',
+      user: this.config.owner
+    });
+    if(react !== '✅') {
+      await fail(message, 'Cancelled!');
+      return;
+    }
+
+    await message.channel.send('Goodbye.');
+    this.runningScripts.forEach(rs => this.doStopScript(rs.name));
+    this.client.destroy();
+  }
+
   @Command(['shutdown', 'forceshutdown', 'fuckfuckfuck']) // DONE
   public shutdown(): void {
     console.error('[FATAL] Forcefully shutting down!', new Date());
@@ -241,7 +315,7 @@ export default class MessageHandler {
     let args = new Arguments(message, command, words.slice(2));
 
     if(this.internalCommands[command] && message.author.id === this.config.owner) {
-      return this[command](message, args).catch((e: Error) => this.logger.error(e));
+      return this[this.internalCommands[command]](message, args).catch((e: Error) => this.logger.error(e));
     }
 
     this.runningScripts
@@ -267,7 +341,12 @@ export default class MessageHandler {
   }
   private doStopScript(scriptName: string): void {
     const script = this.runningScripts.find(s => s.name === scriptName);
-    script.stop();
-    this.runningScripts.splice(this.runningScripts.indexOf(script), 1);
+    if(script) {
+      script.stop();
+      this.runningScripts.splice(this.runningScripts.indexOf(script), 1);
+    }
+  }
+  private isRunning(scriptName: string): boolean {
+    return !!this.runningScripts.forEach(s => s.name === scriptName)
   }
 }

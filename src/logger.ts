@@ -42,7 +42,7 @@ export class Logger {
     const channel = (this.client.channels.get(this.config.logChannel) as discord.TextChannel);
     if(!channel) return this.fallbackLogger[level.toLowerCase()](...items);
 
-    items = items.map((i: any): string => inspect(i).substr(0, 500)) as string[];
+    items = items.map((i: any): string => '```js\n' + inspect(i).substr(0, 500) + '```') as string[];
     let fields = items.slice(1, 4).map(i => ({name: '​', /* zero width space */ value: i}));
     if (items.length > 3) fields.push({name: '​', /* zero width space */ value: `*+ ${items.length - 3} more*`});
 

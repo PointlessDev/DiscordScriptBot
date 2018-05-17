@@ -20,9 +20,9 @@ export default class Script implements ScriptData {
   public code: string;
   public created: Date;
   public updated: Date;
-  public running: boolean;
-  private commands: ScriptCommand[];
-  private clientEvents: ScriptClientListener[];
+  public listening: boolean = false;
+  public commands: ScriptCommand[] = [];
+  public clientEvents: ScriptClientListener[] = [];
   constructor(private data: ScriptData, private messageHandler: MessageHandler) {
     this.name = data.name;
     this.code = data.code;
@@ -31,18 +31,18 @@ export default class Script implements ScriptData {
   }
 
   public async run(message: discord.Message): Promise<void> {
-    this.running = true;
     const vm = new VM({
       sandbox: CreateScriptSandbox(this, message, this.messageHandler.config.owner),
       timeout: 5000
     });
-    return vm.run(this.code);
+    vm.run(this.code);
+    return;
   }
   public stop(): boolean {
     this.commands = [];
     this.clientEvents.forEach(({event, handler}) => this.messageHandler.client.removeListener(event, handler));
     this.clientEvents = [];
-    this.running = false;
+    this.listening = false;
     return true;
   }
 
@@ -50,6 +50,7 @@ export default class Script implements ScriptData {
     if(triggers.some(t => !!this.messageHandler.internalCommands[t])) {
       return false;
     }
+    this.listening = true;
     this.commands.push({triggers, handler});
     return true;
   }
@@ -59,6 +60,7 @@ export default class Script implements ScriptData {
     return triggered.length;
   }
   public addListener(event: string, handler: (...args: any[]) => void): void {
+    this.listening = true;
     this.clientEvents.push({event, handler});
     this.messageHandler.client.on(event, handler);
   }

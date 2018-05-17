@@ -5,7 +5,6 @@ import * as util from 'util';
 import Logger from './logger';
 import ConfigInterface from './config';
 import MessageHandler from './commands';
-import Database from './database';
 
 const ENV = process.env.ENV;
 
@@ -13,7 +12,6 @@ let logger: Logger;
 let client: discord.Client;
 let config: ConfigInterface;
 let messageHandler: MessageHandler;
-let db = new Database();
 
 // Meta
 async function loadConfig(): Promise<void> {
@@ -24,19 +22,23 @@ async function loadConfig(): Promise<void> {
 async function start() {
   console.log(`[INFO]: Starting DiscordScriptBot in ${ENV} environment`);
   await loadConfig();
-  await db.connect();
 
   client = new discord.Client();
   logger = new Logger(client, config, 'Main');
-  messageHandler = new MessageHandler(client, config, db);
-  client.on('ready', () => {
-    if(ENV !== 'dev') logger.log(`Ready event emmitted`);
-    console.log(`[INFO]: Ready as ${client.user.tag}`);
-  });
+  messageHandler = new MessageHandler(client, config);
+  client
+    .on('ready', () => {
+      if(ENV !== 'dev') logger.log(`Ready event emmitted`);
+      console.log(`[INFO]: Ready as ${client.user.tag}`);
+    })
+    .on('disconnect', restart);
 
   await client.login(config.token);
 }
-
+function restart() {
+  client = null;
+  start();
+}
 start();
 
 process.on('unhandledRejection', (err: Error) => console.error('Unhandled Promise Rejection:\n', err.stack));

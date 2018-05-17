@@ -17,7 +17,9 @@ export interface Sandbox {
 export function CreateScriptSandbox(script: Script, message: discord.Message, owner: string): ScriptSandbox {
   function addCommand(triggers: string|string[], handler: CommandFunction): boolean {
     let added = script.addCommand(Array.isArray(triggers) ? triggers : [triggers], handler);
-    message.channel.send(`Could not register command with triggers [${triggers}]. A trigger conflicts with an internal command`);
+    if(!added) {
+      message.channel.send(`Could not register command with triggers [${triggers}]. A trigger conflicts with an internal command`);
+    }
     return added;
   }
 
@@ -30,7 +32,7 @@ export function CreateScriptSandbox(script: Script, message: discord.Message, ow
     command: (triggers, handler) => addCommand(triggers, handler),
     isOwner: message.author.id === owner,
     message,
-    owner: this.messageHandler.config.owner,
+    owner: owner,
     proxy: (event, listener) => addListener(event, listener)
   };
 }
