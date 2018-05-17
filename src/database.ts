@@ -1,8 +1,11 @@
 import * as sqlite from 'sqlite';
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
+import Script from './script';
+import ConfigInterface from './config';
+import MessageHandler from './commands';
 
-export interface Script {
+export interface ScriptData {
   name: string;
   code: string;
   created: Date;
@@ -10,37 +13,43 @@ export interface Script {
 }
 
 export default class Database {
-  db: sqlite.Database;
-  filename: string;
-  constructor() {}
-
-  async connect(filename: string='./programs.sqlite') {
+  public db: sqlite.Database;
+  public filename: string;
+  constructor(private messageHandler: MessageHandler) {}
+  public async connect(filename: string = './programs.sqlite') {
     this.filename = filename;
     this.db = await sqlite.open(filename, {promise: Promise});
     await this.checkDb();
   }
 
-  async getScript(name: string): Promise<Script> {
-    return this.db.get('SELECT name, code, created, updated FROM scripts WHERE name = ?', name)
-      .catch(e => {throw e; });
+  public async isScript(name: string): Promise<boolean> {
+    return !!await this.db.get('SELECT name FROM scripts WHERE name = ?', name);
   }
-  async saveScript(name: string, code: string): Promise<void> {
+  public async getScript(name: string): Promise<Script|void> {
+    const scriptData = await this.db.get('SELECT name, code, created, updated FROM scripts WHERE name = ?', name)
+      .catch(e => {throw e; });
+    return scriptData ? new Script(scriptData, this.messageHandler) : null;
+  }
+  public async listScripts(): Promise<string[]> {
+    return (await this.db.all('SELECT name FROM scripts')).map(s => s.name);
+  }
+  public async saveScript(name: string, code: string): Promise<void> {
     let editing = await this.db.get('SELECT name FROM scripts WHERE name=?', name);
     if(editing) await this.db.run(`UPDATE scripts SET code = ?, updated = datetime('now') WHERE name = ?`, code, name);
   else await this.db.run('INSERT INTO scripts(name, code, created) VALUES (?, ?, datetime(\'now\'));', name, code);
   }
-  async deleteScript(name: string): Promise<void> {
+  public async deleteScript(name: string): Promise<void> {
     await this.db.run('DELETE FROM scripts WHERE name = ?', name);
     return;
   }
 
-  async checkDb(): Promise<void> {
+  public async checkDb(): Promise<void> {
     console.log('[INFO]: Checking table exists...');
     let name = await this.db.get('SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'scripts\'');
     if(name) console.log('[INFO]: Table exists!');
     else await this.initDb();
   }
-  async initDb(): Promise<void> {
+  public async initDb(): Promise<void> {
     console.log('[INFO]: Creating new table \'scripts\'');
     await this.db.exec(`CREATE TABLE scripts(
   name varchar(40),

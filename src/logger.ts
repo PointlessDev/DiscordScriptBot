@@ -14,31 +14,28 @@ export enum ErrorColors {
 }
 
 export class Logger {
-  fallbackLogger: DummyLogger;
-  channel: discord.TextChannel;
+  public channel: discord.TextChannel;
+  private readonly fallbackLogger: DummyLogger;
 
   constructor(private client: discord.Client,
               private config: ConfigInterface,
               private state: string
   ) {
     this.fallbackLogger = new DummyLogger('[Fallback Logger] ' + state);
-    this.channel = this.client.channels.get(this.config.logChannel) as TextChannel
+    this.channel = this.client.channels.get(this.config.logChannel) as TextChannel;
   }
 
-  debug(...items: any[]) {
-    this.send('Debug', items)
+  public debug(...items: any[]) {
+    this.send('Debug', items);
   }
-
-  log(...items: any[]) {
-    this.send('Log', items)
+  public log(...items: any[]) {
+    this.send('Log', items);
   }
-
-  warn(...items: any[]) {
-    this.send('Warn', items)
+  public warn(...items: any[]) {
+    this.send('Warn', items);
   }
-
-  error(...items: any[]) {
-    this.send('Error', items)
+  public error(...items: any[]) {
+    this.send('Error', items);
   }
 
   private send(level: ErrorLevel, items: any[]) {
@@ -51,16 +48,16 @@ export class Logger {
 
     channel.send({embed: {
       author: {
-        name: `[${level}]: ${this.state}`,
-        icon_url: this.config.iconURL
+        icon_url: this.config.iconURL,
+        name: `[${level}]: ${this.state}`
       },
       color: ErrorColors[level],
       description: items[0],
       fields,
       footer: {
-        text: `DiscordScriptBot by Pointless. Host: ${hostname()}. Env: ${process.env.ENV} V: ${require('../package.json').version}`
+        text: `DiscordScriptBot by Pointless. Host: ${hostname()}${process.env.ENV && '. Env: ' + process.env.ENV}. V: ${require('../package.json').version}`
       }
-    }})
+    }});
   }
 }
 
@@ -68,17 +65,18 @@ export class DummyLogger {
   constructor(public state: string) {}
   [key: string]: any
 
-  debug(...items: any[]): void {
-    console.debug(`[DEBUG] (${this.state}): `, ...items)
+  public debug(...items: any[]): void {
+    // noinspection TsLint
+    console.debug(`[DEBUG] (${this.state}): `, ...items);
   }
-  log(...items: any[]): void {
-    console.log(`[LOG] (${this.state}): `, ...items)
+  public log(...items: any[]): void {
+    console.log(`[LOG] (${this.state}): `, ...items);
   }
-  warn(...items: any[]): void {
-    console.warn(`[WARN] (${this.state}): `, ...items)
+  public warn(...items: any[]): void {
+    console.warn(`[WARN] (${this.state}): `, ...items);
   }
-  error(...items: any[]): void {
-    console.log(`[ERR] (${this.state}): `, ...items)
+  public error(...items: any[]): void {
+    console.log(`[ERR] (${this.state}): `, ...items);
   }
 }
 

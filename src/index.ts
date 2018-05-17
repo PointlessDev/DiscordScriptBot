@@ -31,7 +31,7 @@ async function start() {
   messageHandler = new MessageHandler(client, config, db);
   client.on('ready', () => {
     if(ENV !== 'dev') logger.log(`Ready event emmitted`);
-    console.log(`[INFO]: Ready as ${client.user.tag}`)
+    console.log(`[INFO]: Ready as ${client.user.tag}`);
   });
 
   await client.login(config.token);

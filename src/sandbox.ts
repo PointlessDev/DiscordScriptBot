@@ -1,10 +1,10 @@
-import {Script} from './database';
 import * as discord from 'discord.js';
-import {CommandFunction, default as MessageHandler} from './commands';
+import {CommandFunction} from './commands';
+import Script, {EventListener} from './script';
 
 export interface ScriptSandbox extends Sandbox {
-  command: (triggers: string|string[], handler: CommandFunction) => void
-  proxy: (event: string, listener: Function) => void
+  command: (triggers: string|string[], handler: CommandFunction) => boolean;
+  proxy: (event: string, listener: EventListener) => void;
 }
 
 export interface Sandbox {
@@ -14,32 +14,34 @@ export interface Sandbox {
   message: discord.Message;
 }
 
-export function CreateScriptSandbox(script: Script, message: discord.Message, owner: string, messageHandler: MessageHandler): ScriptSandbox {
-  function addCommand(triggers: string|string[], handler: CommandFunction) {
-    messageHandler.addScriptCommand(script, Array.isArray(triggers) ? triggers : [triggers], handler)
+export function CreateScriptSandbox(script: Script, message: discord.Message, owner: string): ScriptSandbox {
+  function addCommand(triggers: string|string[], handler: CommandFunction): boolean {
+    let added = script.addCommand(Array.isArray(triggers) ? triggers : [triggers], handler);
+    message.channel.send(`Could not register command with triggers [${triggers}]. A trigger conflicts with an internal command`);
+    return added;
   }
 
-  function addListener(event: string, listener: Function) {
-    messageHandler.addScriptClientListener(script, event, listener);
+  function addListener(event: string, listener: EventListener) {
+    script.addListener(event, listener);
   }
 
   return {
-    owner,
-    isOwner: message.author.id === owner,
     client: message.client,
-    message,
     command: (triggers, handler) => addCommand(triggers, handler),
+    isOwner: message.author.id === owner,
+    message,
+    owner: this.messageHandler.config.owner,
     proxy: (event, listener) => addListener(event, listener)
-  }
+  };
 }
 
 export function CreateEvalSandbox(message: discord.Message, owner: string): Sandbox {
   return {
-    owner,
-    isOwner: message.author.id === owner,
     client: message.client,
-    message
-  }
+    isOwner: message.author.id === owner,
+    message,
+    owner
+  };
 }
 
 export default CreateScriptSandbox;
