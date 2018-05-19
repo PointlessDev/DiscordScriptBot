@@ -2,7 +2,6 @@ import * as sqlite from 'sqlite';
 import * as fs from 'fs';
 import * as path from 'path';
 import Script from './script';
-import ConfigInterface from './config';
 import MessageHandler from './commands';
 
 export interface ScriptData {
@@ -16,9 +15,9 @@ export default class Database {
   public db: sqlite.Database;
   public filename: string;
   constructor(private messageHandler: MessageHandler) {}
-  public async connect(filename: string = './programs.sqlite') {
-    this.filename = filename;
-    this.db = await sqlite.open(filename, {promise: Promise});
+  public async connect(filename: string) {
+    this.filename = filename || path.resolve(__dirname, '../data/db.sqlite');
+    this.db = await sqlite.open(this.filename, {promise: Promise});
     await this.checkDb();
   }
 

@@ -15,8 +15,15 @@ let messageHandler: MessageHandler;
 
 // Meta
 async function loadConfig(): Promise<void> {
-  let data = await util.promisify(fs.readFile)(path.resolve(__dirname, 'config.json'), 'utf8');
+  let data = await util.promisify(fs.readFile)(path.resolve(__dirname, '../data/config.json'), 'utf8');
   config = JSON.parse(data);
+
+  if(typeof config.owner !== 'string') {
+    throw Error('Please set config.owner! (Must be a string)');
+  }
+  if(typeof config.token !== 'string') {
+    throw Error('Missing a token to connect to bot with! (Must be a string)');
+  }
 }
 
 async function start() {
