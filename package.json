@@ -4,7 +4,7 @@
   "description": "A bot with more or less no inbuilt commands",
   "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tslint -p ."
   },
   "repository": {
     "type": "git",

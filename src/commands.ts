@@ -9,8 +9,8 @@ import * as util from 'util';
 import moment = require('moment');
 import {hostname} from 'os';
 import Script from './script';
+import {CreateEvalSandbox} from './sandbox';
 
-const utcOffset = 12; // TODO Sort this out
 const ENV = process.env.ENV;
 
 function Command(triggers?: string[]) {
@@ -95,6 +95,34 @@ export default class MessageHandler {
       },
       title: `DiscordScriptBot v${require('../package.json').version || 'Unknown'}`,
       url: require('../package.json').homepage
+    }});
+  }
+
+  @Command()
+  public async eval(message: discord.Message, args: Arguments): Promise<void> {
+    let code = args.contentFrom(0);
+    const start = process.hrtime();
+    let desc;
+    let success = false;
+    try {
+      const returned = new VM({
+        sandbox: CreateEvalSandbox(message, this.config.owner),
+        timeout: 5000
+      }).run(code);
+
+      success = true;
+      desc = util.inspect(returned).substr(0, 800);
+    } catch(e) {
+      desc = util.inspect(e);
+    }
+    const [seconds, ns] = process.hrtime(start);
+    const micros = ns / 1000;
+    message.channel.send({embed : {
+      description: `:inbox_tray: Input:\`\`\`js\n${code}\`\`\`:outbox_tray: Output: \`\`\`${desc}\`\`\``,
+      footer: {
+        text: `${seconds ? seconds + 's, ' : ''}${micros}µs`
+      },
+      title: success ? '✅ Executed Successfully' : '❌ Execution Failed.'
     }});
   }
 
@@ -247,13 +275,13 @@ export default class MessageHandler {
           {
             inline: true,
             name: 'Created',
-            value: moment(script.created).add(utcOffset, 'hours').from(new Date()),
+            value: moment.utc(script.created).fromNow(),
           },
           {
             inline: true,
             name: 'Updated',
             value: script.updated
-              ? moment(script.updated).add(utcOffset, 'hours').from(new Date())
+              ? moment.utc(script.updated).fromNow()
               : 'Never',
           }
         ],
@@ -261,7 +289,7 @@ export default class MessageHandler {
           icon_url: this.config.iconURL,
           text: `DiscordScriptBot by Pointless. Host: ${hostname()}. Env: ${process.env.ENV} V: ${require('../package.json').version}`
         },
-        title: `\`${running && '[RUNNING] '}${script.name}\``
+        title: `\`${running ? '[RUNNING] ' : ''}${script.name}\``
       }});
   }
 
