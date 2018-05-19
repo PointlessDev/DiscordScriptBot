@@ -1,4 +1,5 @@
-#DiscordScriptBot
+# DiscordScriptBot
+
 [![Build Status](https://travis-ci.org/PointlessDev/DiscordScriptBot.svg?branch=master)](https://travis-ci.org/PointlessDev/DiscordScriptBot)
 [![forthebadge](https://forthebadge.com/images/badges/contains-technical-debt.svg)](https://forthebadge.com)
 
@@ -17,7 +18,7 @@ interface ConfigInterface {
 ```
 
 ### Use
-In a channel with the bot, run `@Bot help` (WIP)
+In a channel with the bot, run `@Bot help`
 
 ### Oh crap, I seriously broke something
 To reload the client, use `@Bot restart`, which destroys the client, and creates a new one.

@@ -28,10 +28,10 @@ function Command(data: CommandData) {
     }
     triggers.forEach(trigger => target.internalCommands[trigger] = propertyKey);
     target.helpInfo.push({
-      triggers,
       description: data.description,
       params: data.params,
-    })
+      triggers
+    });
   };
 }
 
@@ -43,11 +43,10 @@ interface ConfirmationOptions {
   confirmation?: string;
   choices?: string[];
 }
-
 interface HelpEntry {
   triggers: string[];
   description: string;
-  params?: string
+  params?: string;
 }
 interface CommandData {
   triggers?: string[];
@@ -90,16 +89,16 @@ export default class MessageHandler {
     } else if(command && info) {
       const fields = [
         {
+          inline: true,
           name: 'usage:',
-          value: `@Bot ${info.triggers[0]} ${info.params || ''}`,
-          inline: true
+          value: `@Bot ${info.triggers[0]} ${info.params || ''}`
         }
       ];
       if(info.triggers.length > 1) {
         fields.push({
+          inline: true,
           name: 'aliases:',
-          value: info.triggers.slice(1).join(', '),
-          inline: true
+          value: info.triggers.slice(1).join(', ')
         });
       }
 
@@ -108,15 +107,15 @@ export default class MessageHandler {
         description: info.description,
         fields,
         title: '`' + info.triggers[0] + '`',
-      }})
+      }});
     } else {
       message.channel.send({embed: {
-        title: 'PointlessScriptBot Help',
         fields: this.helpInfo.map(h => ({
           name: h.triggers[0] + ' ' + (h.params || ''),
           value: h.description
-        }))
-      }})
+        })),
+        title: 'PointlessScriptBot Help'
+      }});
     }
   }
 
@@ -195,8 +194,8 @@ export default class MessageHandler {
 
   @Command({
     description: 'Creates or updates a script',
-    triggers: ['save', 'edit', 'create', 'add'],
-    params: '<name> <code>'
+    params: '<name> <code>',
+    triggers: ['save', 'edit', 'create', 'add']
   })
   public async save(message: discord.Message, args: Arguments): Promise<void> {
     let name = args[0];
@@ -227,8 +226,8 @@ export default class MessageHandler {
 
   @Command({
     description: 'Deletes a script from the database',
-    triggers: ['delete', 'remove'],
-    params: '<name>'
+    params: '<name>',
+    triggers: ['delete', 'remove']
   })
   public async delete(message: discord.Message, args: Arguments): Promise<void> {
     let name = args[0];
@@ -262,8 +261,8 @@ export default class MessageHandler {
 
   @Command({
     description: 'Runs a script',
-    triggers: ['run', 'start'],
-    params: '<name>'
+    params: '<name>',
+    triggers: ['run', 'start']
   })
   public async run(message: discord.Message, args: Arguments): Promise<void> {
     let name = args[0];
@@ -301,8 +300,8 @@ export default class MessageHandler {
 
   @Command({
     description: 'Stops a script, and unregisters commands & listeners',
-    triggers: ['stop', 'end'],
-    params: '<name>'
+    params: '<name>',
+    triggers: ['stop', 'end']
   })
   public async stop(message: discord.Message, args: Arguments): Promise<void> {
     const name = args[0];
@@ -348,8 +347,8 @@ export default class MessageHandler {
 
   @Command({
     description: 'Shows details of a given script, or bot info',
-    triggers: ['info', 'details', 'script'],
-    params: '[name]'
+    params: '[name]',
+    triggers: ['info', 'details', 'script']
   })
   public async info(message: discord.Message, args: Arguments): Promise<void> {
     const name = args[0];
@@ -478,6 +477,6 @@ export default class MessageHandler {
     return !!this.runningScripts.find(s => s.name === scriptName);
   }
   private getHelpInfo(command: string): HelpEntry|void {
-    return this.helpInfo.find(h => h.triggers.includes(command))
+    return this.helpInfo.find(h => h.triggers.includes(command));
   }
 }
