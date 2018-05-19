@@ -45,6 +45,7 @@ export class Logger {
     items = items.map((i: any): string => '```js\n' + inspect(i).substr(0, 500) + '```') as string[];
     let fields = items.slice(1, 4).map(i => ({name: '​', /* zero width space */ value: i}));
     if (items.length > 3) fields.push({name: '​', /* zero width space */ value: `*+ ${items.length - 3} more*`});
+    let envText = process.env.ENV && '. Env: ' + process.env.ENV;
 
     channel.send({embed: {
       author: {
@@ -55,7 +56,7 @@ export class Logger {
       description: items[0],
       fields,
       footer: {
-        text: `DiscordScriptBot by Pointless. Host: ${hostname()}${process.env.ENV && '. Env: ' + process.env.ENV}. V: ${require('../package.json').version}`
+        text: `DiscordScriptBot by Pointless. Host: ${hostname()}${envText}. V: ${require('../package.json').version}`
       }
     }});
   }
@@ -66,8 +67,7 @@ export class DummyLogger {
   [key: string]: any
 
   public debug(...items: any[]): void {
-    // noinspection TsLint
-    console.debug(`[DEBUG] (${this.state}): `, ...items);
+    console.log(`[DEBUG] (${this.state}): `, ...items); // Log because debug isn't allowed
   }
   public log(...items: any[]): void {
     console.log(`[LOG] (${this.state}): `, ...items);

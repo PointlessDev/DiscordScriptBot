@@ -55,52 +55,47 @@ export default class MessageHandler {
     this.db = new Database(this);
     this.db.connect()
       .then(() => (ENV === 'dev' && console.log('[INFO]: Connected to DB!')))
-      .catch(async e => {this.logger.error('Failed to connect to DB!', e);console.error('Failed to connect to DB!');throw e;})
-  }
-
-  @Command() // DONE
-  public async echo(message: discord.Message, args: Arguments): Promise<void> {
-    await message.reply(args.contentFrom(0));
+      .catch(async e => {this.logger.error('Failed to connect to DB!', e); console.error('Failed to connect to DB!'); process.exit(1); });
   }
 
   @Command()
   public async status(message: discord.Message, args: Arguments): Promise<void> {
     message.channel.send({embed: {
-      title: `DiscordScriptBot v${require('../package.json').version || 'Unknown'}`,
-      description: 'DiscordScriptBot, a bot designed with extensibility and ease of modification in mind. May contain tree nuts.',
-      url: require('../package.json').homepage,
       color: 0x4CAF50,
+      description: 'DiscordScriptBot, a bot designed with extensibility and ease of modification in mind. May contain tree nuts.',
+      fields: [
+        {
+          inline: true,
+          name: 'Node.js',
+          value: process.version
+        },
+        {
+          inline: true,
+          name: 'Discord.js',
+          value: discord.version,
+        },
+        {
+          inline: true,
+          name: 'Env',
+          value: `\`${ENV}\``
+        },
+        {
+          inline: true,
+          name: 'Host',
+          value: hostname()
+        },
+        {
+          inline: true,
+          name: 'Running Scripts',
+          value: this.runningScripts.length
+        }
+      ],
       footer: {
         text: 'Made by Pointless'
       },
-      fields: [
-        {
-          name: 'Node.js',
-          value: process.version,
-          inline: true
-        },
-        {
-          name: 'Discord.js',
-          value: discord.version,
-          inline: true
-        },
-        {
-          name: 'Env',
-          value: `\`${ENV}\``,
-          inline: true
-        },
-        {
-          name: 'Host',
-          value: hostname(),
-          inline: true
-        },
-        {
-          name: 'Running Scripts',
-          value: this.runningScripts.length,
-          inline: true
-        }
-      ]
-    }})
+      title: `DiscordScriptBot v${require('../package.json').version || 'Unknown'}`,
+      url: require('../package.json').homepage
+    }});
   }
 
   @Command(['save', 'edit', 'create', 'add'])
@@ -186,7 +181,10 @@ export default class MessageHandler {
           let commands = script.commands.length;
           let events = script.clientEvents.length;
           this.runningScripts.push(script);
-          await succeed(message, `Script ${name} has been run! Registered ${commands} command${commands !== 1 ? 's' : ''} and ${events} client listener${events !== 1 ? 's' : ''}`);
+          await succeed(message,
+            `Script ${name} has been run! Registered ${commands} command${commands !== 1 ? 's' : ''} ` +
+            `and ${events} client listener${events !== 1 ? 's' : ''}`
+          );
         } else {
           await succeed(message, `Script ${name} has been run! No listeners registered!`);
         }
@@ -347,6 +345,6 @@ export default class MessageHandler {
     }
   }
   private isRunning(scriptName: string): boolean {
-    return !!this.runningScripts.forEach(s => s.name === scriptName)
+    return !!this.runningScripts.forEach(s => s.name === scriptName);
   }
 }

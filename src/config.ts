@@ -5,4 +5,4 @@ export interface ConfigInterface {
   iconURL?: string;
 }
 
-export default ConfigInterface
+export default ConfigInterface;
