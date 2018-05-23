@@ -63,7 +63,7 @@ export default class MessageHandler {
     return new RegExp(`^<@!?${this.client.user.id}>$`);
   }
   [propKey: string]: CommandFunction|any;
-  private db: Database;
+  public db: Database;
   constructor(
     public client: discord.Client,
     public config: ConfigInterface

@@ -1,10 +1,12 @@
 import * as discord from 'discord.js';
 import {CommandFunction} from './commands';
 import Script, {EventListener} from './script';
+import {Database} from 'sqlite';
 
 export interface ScriptSandbox extends Sandbox {
   command: (triggers: string|string[], handler: CommandFunction) => boolean;
   proxy: (event: string, listener: EventListener) => void;
+  db: Database;
 }
 
 export interface Sandbox {
@@ -14,7 +16,7 @@ export interface Sandbox {
   message: discord.Message;
 }
 
-export function CreateScriptSandbox(script: Script, message: discord.Message, owner: string): ScriptSandbox {
+export function CreateScriptSandbox(script: Script, message: discord.Message, db: Database, owner: string): ScriptSandbox {
   function addCommand(triggers: string|string[], handler: CommandFunction): boolean {
     let added = script.addCommand(Array.isArray(triggers) ? triggers : [triggers], handler);
     if(!added) {
@@ -30,6 +32,7 @@ export function CreateScriptSandbox(script: Script, message: discord.Message, ow
   return {
     client: message.client,
     command: (triggers, handler) => addCommand(triggers, handler),
+    db,
     isOwner: message.author.id === owner,
     message,
     owner: owner,

@@ -33,7 +33,7 @@ export default class Script implements ScriptData {
 
   public async run(message: discord.Message): Promise<void> {
     const vm = new VM({
-      sandbox: CreateScriptSandbox(this, message, this.messageHandler.config.owner),
+      sandbox: CreateScriptSandbox(this, message, this.messageHandler.db.db, this.messageHandler.config.owner),
       timeout: 5000
     });
     vm.run(this.code);
