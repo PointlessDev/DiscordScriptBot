@@ -422,7 +422,7 @@ export default class MessageHandler {
   })
   public async list(message: discord.Message, args: Arguments): Promise<void> {
     let scripts = await this.db.listScripts();
-    if(args[0].toLowerCase() === 'running') scripts = scripts.filter(s => this.isRunning(s));
+    if(args[0] && args[0].toLowerCase() === 'running') scripts = scripts.filter(s => this.isRunning(s));
     let nameList = scripts.map(s => (this.isRunning(s) ? '*' : '-') + ` ${s}\n`);
 
     const maxLen = 20;
