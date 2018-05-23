@@ -4,6 +4,7 @@ import MessageHandler, {CommandFunction} from './commands';
 import {ScriptData} from './database';
 import * as discord from 'discord.js';
 import Arguments from './arguments';
+import {fail} from './response';
 
 interface ScriptClientListener {
   event: string;
@@ -56,7 +57,17 @@ export default class Script implements ScriptData {
   }
   public runCommand(trigger: string, message: discord.Message, args: Arguments): number {
     let triggered = this.commands.filter(c => c.triggers.includes(trigger));
-    triggered.forEach(c => c.handler(message, args));
+    triggered.forEach(async c => {
+      try {
+        await c.handler(message, args);
+      } catch(e) {
+        this.messageHandler.logger.error(
+          `Error in script ${this.name}. Failed to run command ${c.triggers[0]} (Triggered by: ${trigger})`,
+          e
+        );
+        await fail(message, 'Command threw an error! This has been logged.');
+      }
+    });
     return triggered.length;
   }
   public addListener(event: string, handler: (...args: any[]) => void): void {

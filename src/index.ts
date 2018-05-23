@@ -38,6 +38,8 @@ async function start() {
       if(ENV !== 'dev') logger.log(`Ready event emmitted`);
       console.log(`[INFO]: Ready as ${client.user.tag}`);
     })
+    .on('error', e => logger.error('Client.error emitted!', e))
+    .on('warn', e => logger.warn('Client.warn emitted!', e))
     .on('disconnect', restart);
 
   await client.login(config.token);
@@ -48,4 +50,4 @@ function restart() {
 }
 start();
 
-process.on('unhandledRejection', (err: Error) => console.error('Unhandled Promise Rejection:\n', err.stack));
+process.on('unhandledRejection', (err: Error) => (logger || console).error('Unhandled Promise Rejection:\n', err.stack));

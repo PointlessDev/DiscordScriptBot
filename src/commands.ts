@@ -58,11 +58,11 @@ export default class MessageHandler {
   public internalCommands: {[propKey: string]: string}; // CommandName: CommandHandlerKey
   public helpInfo: HelpEntry[];
   public runningScripts: Script[] = [];
+  public logger: Logger;
   public get BOT_MENTION_PATTERN(): RegExp {
     return new RegExp(`^<@!?${this.client.user.id}>$`);
   }
   [propKey: string]: CommandFunction|any;
-  private logger: Logger;
   private db: Database;
   constructor(
     public client: discord.Client,
@@ -417,10 +417,12 @@ export default class MessageHandler {
   }
 
   @Command({
-    description: 'Lists all scripts stored in the database'
-  }) // DONE
-  public async list(message: discord.Message): Promise<void> {
+    description: 'Lists all scripts stored in the database. Use `running` to only show running scripts',
+    params: '[\'running\']'
+  })
+  public async list(message: discord.Message, args: Arguments): Promise<void> {
     let scripts = await this.db.listScripts();
+    if(args[0].toLowerCase() === 'running') scripts = scripts.filter(s => this.isRunning(s));
     let nameList = scripts.map(s => (this.isRunning(s) ? '*' : '-') + ` ${s}\n`);
 
     const maxLen = 20;
@@ -438,7 +440,7 @@ export default class MessageHandler {
 
     let words = message.content.split(' ');
     if(!this.BOT_MENTION_PATTERN.test(words[0])) return;
-    let command = words[1];
+    let command = words[1].toLowerCase();
     let args = new Arguments(message, command, words.slice(2));
 
     if(this.internalCommands[command] && message.author.id === this.config.owner) {
