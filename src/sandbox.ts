@@ -2,6 +2,7 @@ import * as discord from 'discord.js';
 import {CommandFunction} from './commands';
 import Script, {EventListener} from './script';
 import {Database} from 'sqlite';
+import snekfetch = require('snekfetch');
 
 export interface ScriptSandbox extends Sandbox {
   command: (triggers: string|string[], handler: CommandFunction) => boolean;
@@ -14,6 +15,7 @@ export interface Sandbox {
   isOwner: boolean;
   client: discord.Client;
   message: discord.Message;
+  snekfetch: snekfetch;
 }
 
 export function CreateScriptSandbox(script: Script, message: discord.Message, db: Database, owner: string): ScriptSandbox {
@@ -36,7 +38,8 @@ export function CreateScriptSandbox(script: Script, message: discord.Message, db
     isOwner: message.author.id === owner,
     message,
     owner: owner,
-    proxy: (event, listener) => addListener(event, listener)
+    proxy: (event, listener) => addListener(event, listener),
+    snekfetch: require('snekfetch') // Because this seems to be the only way for types to work
   };
 }
 
@@ -45,7 +48,8 @@ export function CreateEvalSandbox(message: discord.Message, owner: string): Sand
     client: message.client,
     isOwner: message.author.id === owner,
     message,
-    owner
+    owner,
+    snekfetch: require('snekfetch')
   };
 }
 
