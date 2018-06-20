@@ -261,41 +261,32 @@ export default class MessageHandler {
 
   @Command({
     description: 'Runs a script',
-    params: '<name>',
+    params: '<name>....',
     triggers: ['run', 'start']
   })
   public async run(message: discord.Message, args: Arguments): Promise<void> {
-    let name = args[0];
+    if(!args[0]) {
+      await fail(message, 'I can\'t read your mind, which script(s)?');
+      return;
+    }
+    args.forEach(n => this.runScript(message, n));
+  }
+
+  @Command({
+    description: 'Stops and re-runs a script',
+    params: '<name>',
+    triggers: ['restart', 'rerun']
+  })
+  public async restart(message: discord.Message, args: Arguments): Promise<void> {
+    const name = args[0];
     if(!name) {
-      await fail(message, 'I can\'t read your mind, which script?');
+      await fail(message, 'It\'d be nice if you actually told me which script...');
       return;
     }
-    if(this.runningScripts.find(s => s.name === name)) {
-      await fail(message, 'Script is already running! Make sure to `stop` it!');
-      return;
+    if(this.isRunning(name)) {
+      this.doStopScript(name);
     }
-
-    const script = await this.db.getScript(name);
-    if(!script) {
-      await fail(message, 'That script doesn\'t seem to exist');
-      return;
-    }
-
-    script.run(message)
-      .then(async () =>  {
-        if(script.listening) {
-          let commands = script.commands.length;
-          let events = script.clientEvents.length;
-          this.runningScripts.push(script);
-          await succeed(message,
-            `Script ${name} has been run! Registered ${commands} command${commands !== 1 ? 's' : ''} ` +
-            `and ${events} client listener${events !== 1 ? 's' : ''}`
-          );
-        } else {
-          await succeed(message, `Script ${name} has been run! No listeners registered!`);
-        }
-      })
-      .catch(e => fail(message, `Script ${name} threw error: \`\`\`js\n${util.inspect(e).substr(0, 600)}\`\`\``));
+    await this.runScript(message, name);
   }
 
   @Command({
@@ -390,7 +381,6 @@ export default class MessageHandler {
 
   @Command({
     description: 'Destroys the client and starts it again',
-    triggers: ['reload', 'restart']
   })
   public async reload(message: discord.Message, args: Arguments): Promise<void> {
     const react = await this.confirmation(message.channel, {
@@ -474,6 +464,33 @@ export default class MessageHandler {
       script.stop();
       this.runningScripts.splice(this.runningScripts.indexOf(script), 1);
     }
+  }
+  private async runScript(message: discord.Message, name: string): Promise<void> {
+    if(this.runningScripts.find(s => s.name === name)) {
+      await fail(message, `Script "${name}" is already running! Make sure to \`stop\` it!`);
+      return;
+    }
+    const script = await this.db.getScript(name);
+    if(!script) {
+      await fail(message, `Script "${name}" doesn't seem to exist`);
+      return;
+    }
+
+    script.run(message)
+      .then(async () => {
+        if(script.listening) {
+          let commands = script.commands.length;
+          let events = script.clientEvents.length;
+          this.runningScripts.push(script);
+          await succeed(message,
+            `Script ${name} has been run! Registered ${commands} command${commands !== 1 ? 's' : ''} ` +
+            `and ${events} client listener${events !== 1 ? 's' : ''}`
+          );
+        } else {
+          await succeed(message, `Script ${name} has been run! No listeners registered!`);
+        }
+      })
+      .catch(e => fail(message, `Script ${name} threw error: \`\`\`js\n${util.inspect(e).substr(0, 600)}\`\`\``));
   }
   private isRunning(scriptName: string): boolean {
     return !!this.runningScripts.find(s => s.name === scriptName);
