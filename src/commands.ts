@@ -430,6 +430,7 @@ export default class MessageHandler {
 
     let words = message.content.split(' ');
     if(!this.BOT_MENTION_PATTERN.test(words[0])) return;
+    if(!words[1]) return;
     let command = words[1].toLowerCase();
     let args = new Arguments(message, command, words.slice(2));
 
