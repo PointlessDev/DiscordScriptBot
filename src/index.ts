@@ -8,8 +8,13 @@ import MessageHandler from './commands';
 
 const ENV = process.env.ENV;
 
+interface MyClient extends discord.Client {
+  lastError?: Error;
+  lastWarn?: string;
+}
+
 let logger: Logger;
-let client: discord.Client;
+let client: MyClient;
 let config: ConfigInterface;
 let messageHandler: MessageHandler;
 
@@ -38,8 +43,14 @@ async function start() {
       if(ENV !== 'dev') logger.log(`Ready event emmitted`);
       console.log(`[INFO]: Ready as ${client.user.tag}`);
     })
-    .on('error', e => logger.error('Client.error emitted!', e))
-    .on('warn', e => logger.warn('Client.warn emitted!', e))
+    .on('error', e => {
+      client.lastError = e;
+      logger.error('Client.error emitted! client.lastError updated', e);
+    })
+    .on('warn', e => {
+      client.lastWarn = e;
+      logger.warn('Client.warn emitted! client.lastWarn updated', e);
+    })
     .on('disconnect', restart);
 
   await client.login(config.token);
