@@ -1,6 +1,6 @@
 {
   "name": "discord-script-bot",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "A bot with more or less no inbuilt commands",
   "main": "dist/index.js",
   "scripts": {
