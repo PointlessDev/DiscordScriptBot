@@ -44,6 +44,7 @@ async function start() {
       console.log(`[INFO]: Ready as ${client.user.tag}`);
     })
     .on('error', e => {
+      if(e.message === 'read ECONNRESET') return;
       client.lastError = e;
       logger.error('Client.error emitted! client.lastError updated', e);
     })
