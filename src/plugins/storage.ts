@@ -9,7 +9,7 @@ export function makeSandbox(message: Message, core: BotCore) {
 
   async function set(key: string, value: any) {
     if(!key) throw Error('Key is required');
-    let editing = await db.get(`SELECT name FROM ${TABLE} WHERE key = ?`, key);
+    let editing = await db.get(`SELECT key FROM ${TABLE} WHERE key = ?`, key);
     if(editing) await db.run(`UPDATE ${TABLE} SET value = ?, WHERE key = ?`, JSON.stringify(value), key);
     else await db.run(`INSERT INTO ${TABLE} (key, value) VALUES (?, ?)`, key, JSON.stringify(value));
   }
