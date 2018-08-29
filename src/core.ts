@@ -1,20 +1,20 @@
 import * as discord from 'discord.js';
-import Arguments from './arguments';
+import Arguments from './helpers/arguments';
 import Database from './database';
-import {fail, succeed} from './response';
-import Logger from './logger';
+import {fail, succeed} from './helpers/response';
+import Logger from './helpers/logger';
 import ConfigInterface from './config';
-import {VM} from 'vm2';
 import * as util from 'util';
 import moment = require('moment');
 import {hostname} from 'os';
 import Script from './script';
-import {CreateEvalSandbox} from './sandbox';
+import {VM} from 'vm2';
+import {CreateEvalSandbox} from './helpers/sandbox';
 
-const ENV = process.env.ENV;
+const ENV = process.env.NODE_ENV;
 
 function Command(data: CommandData) {
-  return function(target: MessageHandler, propertyKey: string) {
+  return function(target: BotCore, propertyKey: string) {
     target.internalCommands = target.internalCommands || {};
     target.helpInfo = target.helpInfo || [];
 
@@ -22,9 +22,8 @@ function Command(data: CommandData) {
 
     const collision = triggers.find(t => !!target.internalCommands[t]);
     if(collision) {
-      throw new Error(
-        `Internal command trigger collision: MessageHandler.${propertyKey} is trying to register a trigger, but ${collision} already has!`
-      );
+      throw new Error(`Internal command trigger collision: Core.${propertyKey} is trying to register a ` +
+        `trigger, but ${collision} already has!`);
     }
     triggers.forEach(trigger => target.internalCommands[trigger] = propertyKey);
     target.helpInfo.push({
@@ -54,7 +53,7 @@ interface CommandData {
   params?: string;
 }
 
-export default class MessageHandler {
+export default class BotCore {
   public internalCommands: {[propKey: string]: string}; // CommandName: CommandHandlerKey
   public helpInfo: HelpEntry[];
   public runningScripts: Script[] = [];
@@ -69,11 +68,15 @@ export default class MessageHandler {
     public config: ConfigInterface
   ) {
     client.on('message', m => this.handleMessage(m));
-    this.logger = new Logger(client, config, 'Command Handler');
+    this.logger = new Logger(this, 'Core');
     this.db = new Database(this);
-    this.db.connect(this.config.database)
-      .then(() => (ENV === 'dev' && console.log('[INFO]: Connected to DB!')))
-      .catch(async e => {this.logger.error('Failed to connect to DB!', e); console.error('Failed to connect to DB!'); process.exit(1); });
+    this.db.connect(this.config.dbPath)
+      .then(() => (ENV === 'development' && console.log('[INFO]: Connected to DB!')))
+      .catch(async e => {
+        this.logger.error('Failed to connect to DB!', e);
+        console.error('Failed to connect to DB!');
+        process.exit(1);
+      });
   }
 
   @Command({
@@ -123,9 +126,9 @@ export default class MessageHandler {
     description: 'Prints info about the bot'
   })
   public async status(message: discord.Message, args: Arguments): Promise<void> {
-    message.channel.send({embed: {
+    await message.channel.send({embed: {
       color: 0x4CAF50,
-      description: 'DiscordScriptBot, a bot designed with extensibility and ease of modification in mind. May contain tree nuts.',
+      description: 'DiscordScriptBot, a bot designed for extensibility and ease of modification. May contain peanuts.',
       fields: [
         {
           inline: true,
@@ -166,13 +169,13 @@ export default class MessageHandler {
     params: '<code>'
   })
   public async eval(message: discord.Message, args: Arguments): Promise<void> {
-    let code = args.contentFrom(0);
+    const code = args.contentFrom(0);
     const start = process.hrtime();
     let desc;
     let success = false;
     try {
       const returned = new VM({
-        sandbox: CreateEvalSandbox(message, this.config.owner),
+        sandbox: CreateEvalSandbox(message, this),
         timeout: 5000
       }).run(code);
 
@@ -190,6 +193,18 @@ export default class MessageHandler {
       },
       title: success ? '✅ Executed Successfully' : '❌ Execution Failed.'
     }});
+  }
+
+  @Command({
+    description: 'Wraps an eval script in an async function, allowing for simple awaiting'
+  })
+  public async async(message: discord.Message, args: Arguments) {
+    const code = '_runAsync(async () => {' + args.contentFrom(0) + '})';
+    new VM({
+      sandbox: CreateEvalSandbox(message, this),
+      timeout: 5000
+    }).run(code);
+    await succeed(message, 'Ran script in async mode!');
   }
 
   @Command({
@@ -243,7 +258,9 @@ export default class MessageHandler {
     const running = this.isRunning(name);
     let choice = await this.confirmation(message.channel, {
       choices: ['🗑', '❌'],
-      confirmation: running ? `Script \`${name}\` is running, stop and delete?` : `Are you sure you want to delete \`${name}\`?`,
+      confirmation: running ?
+        `Script \`${name}\` is running, stop and delete?` :
+        `Are you sure you want to delete \`${name}\`?`,
       user: this.config.owner
     });
     if(choice !== '🗑') {
@@ -256,7 +273,10 @@ export default class MessageHandler {
 
     this.db.deleteScript(name)
       .then(() => succeed(message, `Script ${name} deleted!`))
-      .catch(async e => {this.logger.error(e); await fail(message, 'Failed to delete script. Error has been logged.'); });
+      .catch(async e => {
+        this.logger.error(e);
+        await fail(message, 'Failed to delete script. Error has been logged.');
+      });
   }
 
   @Command({
@@ -373,7 +393,8 @@ export default class MessageHandler {
         ],
         footer: {
           icon_url: this.config.iconURL,
-          text: `DiscordScriptBot by Pointless. Host: ${hostname()}. Env: ${process.env.ENV} V: ${require('../package.json').version}`
+          text: `DiscordScriptBot by Pointless. Host: ${hostname()}. ` +
+            `Env: ${process.env.ENV} V: ${require('../package.json').version}`
         },
         title: `\`${running ? '[RUNNING] ' : ''}${script.name}\``
       }});
@@ -382,7 +403,7 @@ export default class MessageHandler {
   @Command({
     description: 'Destroys the client and starts it again',
   })
-  public async reload(message: discord.Message, args: Arguments): Promise<void> {
+  public async reload(message: discord.Message): Promise<void> {
     const react = await this.confirmation(message.channel, {
       confirmation: 'Are you sure you want to soft restart this bot?',
       user: this.config.owner

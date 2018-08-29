@@ -1,10 +1,10 @@
-import CreateScriptSandbox from './sandbox';
+import {CreateScriptSandbox} from './helpers/sandbox';
 import {VM} from 'vm2';
-import MessageHandler, {CommandFunction} from './commands';
+import BotCore, {CommandFunction} from './core';
 import {ScriptData} from './database';
 import * as discord from 'discord.js';
-import Arguments from './arguments';
-import {fail} from './response';
+import Arguments from './helpers/arguments';
+import {fail} from './helpers/response';
 
 interface ScriptClientListener {
   event: string;
@@ -24,7 +24,7 @@ export default class Script implements ScriptData {
   public listening: boolean = false;
   public commands: ScriptCommand[] = [];
   public clientEvents: ScriptClientListener[] = [];
-  constructor(private data: ScriptData, private messageHandler: MessageHandler) {
+  constructor(private data: ScriptData, private core: BotCore) {
     this.name = data.name;
     this.code = data.code;
     this.created = data.created;
@@ -33,7 +33,7 @@ export default class Script implements ScriptData {
 
   public async run(message: discord.Message): Promise<void> {
     const vm = new VM({
-      sandbox: CreateScriptSandbox(this, message, this.messageHandler.db.db, this.messageHandler.config.owner),
+      sandbox: CreateScriptSandbox(this, message, this.core),
       timeout: 5000
     });
     vm.run(this.code);
@@ -41,14 +41,14 @@ export default class Script implements ScriptData {
   }
   public stop(): boolean {
     this.commands = [];
-    this.clientEvents.forEach(({event, handler}) => this.messageHandler.client.removeListener(event, handler));
+    this.clientEvents.forEach(({event, handler}) => this.core.client.removeListener(event, handler));
     this.clientEvents = [];
     this.listening = false;
     return true;
   }
 
   public addCommand(triggers: string[], handler: CommandFunction): boolean {
-    if(triggers.some(t => !!this.messageHandler.internalCommands[t])) {
+    if(triggers.some(t => !!this.core.internalCommands[t])) {
       return false;
     }
     this.listening = true;
@@ -61,7 +61,7 @@ export default class Script implements ScriptData {
       try {
         await c.handler(message, args);
       } catch(e) {
-        this.messageHandler.logger.error(
+        this.core.logger.error(
           `Error in script ${this.name}. Failed to run command ${c.triggers[0]} (Triggered by: ${trigger})`,
           e
         );
@@ -73,6 +73,6 @@ export default class Script implements ScriptData {
   public addListener(event: string, handler: (...args: any[]) => void): void {
     this.listening = true;
     this.clientEvents.push({event, handler});
-    this.messageHandler.client.on(event, handler);
+    this.core.client.on(event, handler);
   }
 }

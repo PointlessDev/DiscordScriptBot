@@ -2,11 +2,11 @@ import * as discord from 'discord.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as util from 'util';
-import Logger from './logger';
+import Logger from './helpers/logger';
 import ConfigInterface from './config';
-import MessageHandler from './commands';
+import BotCore from './core';
 
-const ENV = process.env.ENV;
+const ENV = process.env.NODE_ENV;
 
 interface MyClient extends discord.Client {
   lastError?: Error;
@@ -16,7 +16,7 @@ interface MyClient extends discord.Client {
 let logger: Logger;
 let client: MyClient;
 let config: ConfigInterface;
-let messageHandler: MessageHandler;
+let core: BotCore;
 
 // Meta
 async function loadConfig(): Promise<void> {
@@ -29,6 +29,12 @@ async function loadConfig(): Promise<void> {
   if(typeof config.token !== 'string') {
     throw Error('Missing a token to connect to bot with! (Must be a string)');
   }
+  if(!Array.isArray(config.evalSandbox)) {
+    config.evalSandbox = ['default'];
+  }
+  if(!Array.isArray(config.scriptSandbox)) {
+    config.scriptSandbox = ['default'];
+  }
 }
 
 async function start() {
@@ -36,15 +42,18 @@ async function start() {
   await loadConfig();
 
   client = new discord.Client();
-  logger = new Logger(client, config, 'Main');
-  messageHandler = new MessageHandler(client, config);
+  core = new BotCore(client, config);
+  logger = new Logger(core, 'Main');
   client
     .on('ready', () => {
-      if(ENV !== 'dev') logger.log(`Ready event emmitted`);
+      if(ENV !== 'development') logger.log(`Ready event emitted`);
       console.log(`[INFO]: Ready as ${client.user.tag}`);
+      if(config.logChannel && !client.channels.get(config.logChannel)) {
+        logger.error('Log channel not accessible by bot!');
+      }
     })
     .on('error', e => {
-      if(e.message === 'read ECONNRESET') return;
+      if(e.message === 'read ECONNRESET') return; // Gets thrown all the time for some reason. Seems non-fatal.
       client.lastError = e;
       logger.error('Client.error emitted! client.lastError updated', e);
     })
@@ -62,4 +71,6 @@ function restart() {
 }
 start();
 
-process.on('unhandledRejection', (err: Error) => (logger || console).error('Unhandled Promise Rejection:\n', err.stack));
+process.on('unhandledRejection', (err: Error) => {
+  (logger || console).error('Unhandled Promise Rejection:\n', err.stack);
+});

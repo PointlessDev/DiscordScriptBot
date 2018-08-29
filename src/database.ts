@@ -2,7 +2,8 @@ import * as sqlite from 'sqlite';
 import * as fs from 'fs';
 import * as path from 'path';
 import Script from './script';
-import MessageHandler from './commands';
+import BotCore from './core';
+import * as util from 'util';
 
 export interface ScriptData {
   name: string;
@@ -14,7 +15,7 @@ export interface ScriptData {
 export default class Database {
   public db: sqlite.Database;
   public filename: string;
-  constructor(private messageHandler: MessageHandler) {}
+  constructor(private core: BotCore) {}
   public async connect(filename: string) {
     this.filename = filename || path.resolve(__dirname, '../data/db.sqlite');
     this.db = await sqlite.open(this.filename, {promise: Promise});
@@ -24,10 +25,10 @@ export default class Database {
   public async isScript(name: string): Promise<boolean> {
     return !!await this.db.get('SELECT name FROM scripts WHERE name = ?', name);
   }
-  public async getScript(name: string): Promise<Script|void> {
+  public async getScript(name: string): Promise<Script|null> {
     const scriptData = await this.db.get('SELECT name, code, created, updated FROM scripts WHERE name = ?', name)
       .catch(e => {throw e; });
-    return scriptData ? new Script(scriptData, this.messageHandler) : null;
+    return scriptData ? new Script(scriptData, this.core) : null;
   }
   public async listScripts(): Promise<string[]> {
     return (await this.db.all('SELECT name FROM scripts')).map(s => s.name);
@@ -35,11 +36,10 @@ export default class Database {
   public async saveScript(name: string, code: string): Promise<void> {
     let editing = await this.db.get('SELECT name FROM scripts WHERE name=?', name);
     if(editing) await this.db.run(`UPDATE scripts SET code = ?, updated = datetime('now') WHERE name = ?`, code, name);
-  else await this.db.run('INSERT INTO scripts(name, code, created) VALUES (?, ?, datetime(\'now\'));', name, code);
+    else await this.db.run('INSERT INTO scripts(name, code, created) VALUES (?, ?, datetime(\'now\'));', name, code);
   }
   public async deleteScript(name: string): Promise<void> {
     await this.db.run('DELETE FROM scripts WHERE name = ?', name);
-    return;
   }
 
   public async checkDb(): Promise<void> {
@@ -58,8 +58,8 @@ export default class Database {
   PRIMARY KEY(name)
   );`).catch(e => {throw e; });
 
-    const TEST_SCRIPT_CODE = fs.readFileSync(path.resolve(__dirname, 'test-script.js'), 'utf8');
+    const TEST_SCRIPT_CODE = await util.promisify(fs.readFile)(path.resolve(__dirname, 'test-script.js'), 'utf8');
     await this.saveScript('$test', TEST_SCRIPT_CODE)
-      .catch((e: Error) => console.error('[ERR]: Failed to add test script to fresh db, not *technically* fatal. Stacktrace:\n', e.stack));
+      .catch((e: Error) => this.core.logger.error('Failed to add test script to database!'));
   }
 }

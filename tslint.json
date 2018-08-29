@@ -8,7 +8,7 @@
     "forin": true,
     "indent": [true, "spaces"],
     "label-position": true,
-    "max-line-length": [true, 140],
+    "max-line-length": [true, 120],
     "member-access": true,
     "member-ordering": [true,
       "public-before-private",
