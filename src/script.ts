@@ -1,5 +1,5 @@
-import {CreateScriptSandbox} from './helpers/sandbox';
-import {VM} from 'vm2';
+import {CreateSandboxOptions} from './helpers/sandbox';
+import {NodeVM} from 'vm2';
 import BotCore, {CommandFunction} from './core';
 import {ScriptData} from './database';
 import * as discord from 'discord.js';
@@ -32,10 +32,8 @@ export default class Script implements ScriptData {
   }
 
   public async run(message: discord.Message): Promise<void> {
-    const vm = new VM({
-      sandbox: CreateScriptSandbox(this, message, this.core),
-      timeout: 5000
-    });
+    const vm = new NodeVM(CreateSandboxOptions(message, this.core, this));
+    // @ts-ignore
     vm.run(this.code);
     return;
   }

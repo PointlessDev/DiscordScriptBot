@@ -1,5 +1,14 @@
-export function makeSandbox() {
+export function makeOpts() {
   return {
-    require
+    // require: {
+    //   builtin: ['*'],
+    //   external: false,
+    //   nesting: true
+    // }
+    require: true
   };
 }
+//
+// export function makeSandbox() {
+//   return {require};
+// }

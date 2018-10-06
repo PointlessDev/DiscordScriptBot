@@ -17,7 +17,7 @@ export function makeSandbox(message: Message, core: BotCore) {
     }
   }
   return {
-    _runAsync: runAsync,
+    _runAsync: (asyncFn: () => Promise<void>) => runAsync(asyncFn),
     client: core.client,
     isOwner: message.author.id === core.config.owner,
     message,

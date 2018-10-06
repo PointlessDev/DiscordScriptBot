@@ -9,7 +9,7 @@ import moment = require('moment');
 import {hostname} from 'os';
 import Script from './script';
 import {VM} from 'vm2';
-import {CreateEvalSandbox} from './helpers/sandbox';
+import {CreateSandboxOptions} from './helpers/sandbox';
 
 const ENV = process.env.NODE_ENV;
 
@@ -174,10 +174,7 @@ export default class BotCore {
     let desc;
     let success = false;
     try {
-      const returned = new VM({
-        sandbox: CreateEvalSandbox(message, this),
-        timeout: 5000
-      }).run(code);
+      const returned = new VM(CreateSandboxOptions(message, this)).run(code);
 
       success = true;
       desc = util.inspect(returned).substr(0, 800);
@@ -200,10 +197,7 @@ export default class BotCore {
   })
   public async async(message: discord.Message, args: Arguments) {
     const code = '_runAsync(async () => {' + args.contentFrom(0) + '})';
-    new VM({
-      sandbox: CreateEvalSandbox(message, this),
-      timeout: 5000
-    }).run(code);
+    new VM(CreateSandboxOptions(message, this)).run(code);
     await succeed(message, 'Ran script in async mode!');
   }
 

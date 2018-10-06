@@ -15,8 +15,9 @@ export function makeSandbox(message: Message, core: BotCore) {
   }
   async function get(key: string): Promise<any> {
     if(!key) throw Error('Key is required');
-    const {value} = await db.get(`SELECT key, value FROM ${TABLE} WHERE key = ?`, key);
-    return JSON.parse(value);
+    const obj = await db.get(`SELECT key, value FROM ${TABLE} WHERE key = ?`, key);
+    if(!obj) return obj;
+    return JSON.parse(obj.value);
   }
   async function remove(key: string): Promise<void> {
     if(!key) throw Error('Key is required');

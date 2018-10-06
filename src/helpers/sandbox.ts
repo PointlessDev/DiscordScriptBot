@@ -5,26 +5,26 @@ import * as path from 'path';
 
 export interface Plugin {
   makeSandbox: (message: discord.Message, core: BotCore, script?: Script) => object;
+  makeOpts?: (message: discord.Message, core: BotCore, script?: Script) => object;
 }
 
-export function CreateScriptSandbox(script: Script, message: discord.Message, core: BotCore): object {
+export function CreateSandboxOptions(message: discord.Message, core: BotCore, script?: Script): object {
   let sandbox = {};
-  core.config.scriptSandbox.forEach(plugin => {
-    sandbox = {
-      ...require(path.resolve(__dirname, '../plugins/', plugin)).makeSandbox(message, core, script),
-      ...sandbox
-    };
+  let opts = {};
+  (script ? core.config.scriptSandbox : core.config.evalSandbox).forEach(plugin => {
+    const mod = require(path.resolve(__dirname, '../plugins/', plugin));
+    if(mod.makeSandbox) {
+      sandbox = {
+        ...mod.makeSandbox(message, core, script),
+        ...sandbox
+      };
+    }
+    if(mod.makeOpts) {
+      opts = {
+        ...mod.makeOpts(message, core, script),
+        ...opts
+      };
+    }
   });
-  return sandbox;
-}
-
-export function CreateEvalSandbox(message: discord.Message, core: BotCore): object {
-  let sandbox = {};
-  core.config.evalSandbox.forEach(plugin => {
-    sandbox = {
-      ...require(path.resolve(__dirname, '../plugins/', plugin)).makeSandbox(message, core),
-      ...sandbox
-    };
-  });
-  return sandbox;
+  return {sandbox, ...opts};
 }
