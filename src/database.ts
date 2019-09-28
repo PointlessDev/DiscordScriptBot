@@ -58,7 +58,12 @@ export default class Database {
   PRIMARY KEY(name)
   );`).catch(e => {throw e; });
 
-    const TEST_SCRIPT_CODE = await util.promisify(fs.readFile)(path.resolve(__dirname, 'test-script.js'), 'utf8');
+    const TEST_SCRIPT_CODE = `if(proxy && command && client && message) {
+  message.reply(\`✅ Things seem to be working, proxy exists\`);
+} else {
+  message.reply(\`❌ Online, but some sandbox variables are missing. Check recent changes.\`);
+}
+`;
     await this.saveScript('$test', TEST_SCRIPT_CODE)
       .catch((e: Error) => this.core.logger.error('Failed to add test script to database!'));
   }
