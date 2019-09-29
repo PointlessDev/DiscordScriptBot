@@ -388,7 +388,7 @@ export default class BotCore {
         footer: {
           icon_url: this.config.iconURL,
           text: `DiscordScriptBot by Pointless. Host: ${hostname()}. ` +
-            `Env: ${process.env.ENV} V: ${require('../package.json').version}`
+            `Env: ${ENV} V: ${require('../package.json').version}`
         },
         title: `\`${running ? '[RUNNING] ' : ''}${script.name}\``
       }});
